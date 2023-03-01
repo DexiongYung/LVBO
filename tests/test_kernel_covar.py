@@ -15,8 +15,7 @@ def run(args):
     kernel_fn = kernel_dict[args.kernel]
     X_cont, X_qual, _ = sample_DOE(name_func=args.function, test_func=test_fn)
     kernel = kernel_fn(num_cont=1, num_qual=1, qual_levels=test_fn.qual_levels)
-    X_latent = kernel.convert_qual_to_latent(X_qual=X_qual)
-    X = torch.column_stack((X_cont, X_latent))
+    X = torch.column_stack((X_cont, X_qual))
     covar_matrix = kernel.forward(x1=X, x2=X)
     sns.heatmap(covar_matrix.detach().numpy())
     print(f'is positive definite? {is_positive_definite(covar_matrix)}')
