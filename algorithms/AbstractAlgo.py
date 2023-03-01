@@ -1,6 +1,7 @@
 import torch
 from torch import Tensor
 from abc import abstractmethod
+from botorch.optim import optimize_acqf
 from botorch.fit import fit_gpytorch_mll
 
 
@@ -58,26 +59,8 @@ class AbstractAlgo:
     def fit_mll(self):
         fit_gpytorch_mll(self.get_marginal_ll())
 
-    def optimize_acq(self, X: Tensor, num_iter: int = 50, lr: float = 0.1):
-        X.requires_grad_(True)
-        optimizer = torch.optim.Adam([X], lr=lr)
-        X_traj = []
-        full_bounds = torch.cat((self.X_cont_bounds, self.X_latent_bounds), dim=1)
-
-        for i in range(num_iter):
-            optimizer.zero_grad()
-            losses = - self.acq(X)
-            loss = losses.sum()
-
-            loss.backward()
-            optimizer.step()
-
-            for i in range(full_bounds.shape[1]):
-                self.X_full.data[:, i].clamp_(full_bounds[0, i], full_bounds(1, i))
-
-            X_traj.append(self.X_full.detach().clone())
-
-        return X_traj
+    def optimize_acq(self, ):
+        candidates, _ = optimize_acqf(self.acq, torch.column_stack(self.X_cont_bounds, self.X_qual_bounds))
 
     def add_to_DOE(self, candidates: Tensor, Y: Tensor):
         X_cont_cand = candidates[:, :self.num_quant]

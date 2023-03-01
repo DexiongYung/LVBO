@@ -30,6 +30,6 @@ class LV_EGO(AbstractAlgo):
 
     def set_model(self):
         self.kernel = LVKernel(num_cont=self.X_cont.shape[1], num_qual=self.num_qual, qual_levels=self.qual_levels)
-        self.X_latent_bounds = self.kernel.X_latent_bounds
+        self.X_qual_bounds = self.kernel.X_qual_bounds
         self.model = SingleTaskGP(train_X=torch.column_stack((self.X_cont, self.X_qual)), train_Y=self.Y,
                                   covar_module=self.kernel)

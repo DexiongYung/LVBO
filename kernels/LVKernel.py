@@ -62,7 +62,6 @@ class LVKernel(gpytorch.kernels.Kernel):
         super().__init__(**kwargs)
         self.num_cont = num_cont
         self.latent_feat_nums = list()
-        self.total_features = self.num_cont + sum(self.latent_feat_nums)
 
         # Register continuous parameters for MLE
         self.register_parameter(name='quant_params',
@@ -73,6 +72,7 @@ class LVKernel(gpytorch.kernels.Kernel):
         self.latent_feat_nums = list()
         self.num_qual = num_qual
         self.qual_levels = qual_levels
+        self.total_features = self.num_qual + self.num_cont
 
         for i in range(num_qual):
             # TODO: Don't optimize level 1 and level 2 index 0
@@ -82,10 +82,10 @@ class LVKernel(gpytorch.kernels.Kernel):
             self.register_parameter(name=f"latent_param_{i}",
                                     parameter=torch.nn.Parameter(torch.rand(len(qual_levels[i]), latent_dim)))
 
-        self.X_latent_bounds = torch.zeros(2, self.num_latent)
+        self.X_latent_bounds = torch.zeros(2, 2)
         self.X_latent_bounds[0, :] = -10
         self.X_latent_bounds[1, :] = 10
-        self.total_compressed_feats = self.num_qual + self.num_cont
+        self.X_latent_bounds = self.X_latent_bounds.repeat(1, self.num_qual)
 
     def continous_correlation(self, x1: Tensor, x2: Tensor):
         squared_diff = (x1 - x2) ** 2
@@ -150,7 +150,7 @@ class LVKernel(gpytorch.kernels.Kernel):
 
     def forward(self, x1: Tensor, x2: Tensor, **kwargs):
         assert x1.shape[
-                   1] == self.total_compressed_feats, f"x1 has {x1.shape[1]} features, expected {self.total_compressed_feats}"
+                   1] == self.total_features, f"x1 has {x1.shape[1]} features, expected {self.total_features}"
         assert x2.shape[
-                   1] == self.total_compressed_feats, f"x2 has {x2.shape[1]} features, expected {self.total_compressed_feats}"
+                   1] == self.total_features, f"x2 has {x2.shape[1]} features, expected {self.total_features}"
         return self.LV_dist(x1, x2)
