@@ -68,7 +68,7 @@ class LVKernel(gpytorch.kernels.Kernel):
         self.register_parameter(name='quant_params',
                                 parameter=torch.nn.Parameter(torch.rand(num_cont)))
 
-        
+
 
     def continous_correlation(self, x1: Tensor, x2: Tensor):
         squared_diff = (x1 - x2) ** 2
