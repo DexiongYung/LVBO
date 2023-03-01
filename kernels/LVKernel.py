@@ -18,9 +18,9 @@ class LatentVariableParameters(object):
             self.latent_feat_nums.append(latent_dim)
             self.latent_params.append(torch.nn.Parameter(torch.rand(len(qual_levels[i]), latent_dim)))
 
-        self.X_latent_bounds = torch.zeros(2, self.num_latent)
-        self.X_latent_bounds[0, :] = -10
-        self.X_latent_bounds[1, :] = 10
+        self.X_qual_bounds = torch.zeros(2, self.num_latent)
+        self.X_qual_bounds[0, :] = -10
+        self.X_qual_bounds[1, :] = 10
 
     def convert_qual_to_latent(self, X_qual: Tensor):
         assert X_qual.shape[1] == self.num_qual, f"X_qual has {X_qual.shape[1]} features, but expected {self.num_qual}."
@@ -82,10 +82,10 @@ class LVKernel(gpytorch.kernels.Kernel):
             self.register_parameter(name=f"latent_param_{i}",
                                     parameter=torch.nn.Parameter(torch.rand(len(qual_levels[i]), latent_dim)))
 
-        self.X_latent_bounds = torch.zeros(2, 2)
-        self.X_latent_bounds[0, :] = -10
-        self.X_latent_bounds[1, :] = 10
-        self.X_latent_bounds = self.X_latent_bounds.repeat(1, self.num_qual)
+        self.X_qual_bounds = torch.zeros(2, 2)
+        self.X_qual_bounds[0, :] = -10
+        self.X_qual_bounds[1, :] = 10
+        self.X_qual_bounds = self.X_qual_bounds.repeat(1, self.num_qual)
 
     def continous_correlation(self, x1: Tensor, x2: Tensor):
         squared_diff = (x1 - x2) ** 2
@@ -122,6 +122,8 @@ class LVKernel(gpytorch.kernels.Kernel):
         :param x2: Second tensor of design of experiment samples
         :return: Covariance matrix
         """
+        x1 = x1[0]
+        x2 = x2[0]
         N = x1.shape[0]
         M = x2.shape[0]
         cov = torch.zeros(N, M)
@@ -146,11 +148,11 @@ class LVKernel(gpytorch.kernels.Kernel):
 
                 cov[i, j] += qual_sum
 
-        return torch.exp(cov)
+        return torch.exp(cov).unsqueeze(0)
 
     def forward(self, x1: Tensor, x2: Tensor, **kwargs):
-        assert x1.shape[
-                   1] == self.total_features, f"x1 has {x1.shape[1]} features, expected {self.total_features}"
-        assert x2.shape[
-                   1] == self.total_features, f"x2 has {x2.shape[1]} features, expected {self.total_features}"
+        # assert x1.shape[
+        #            1] == self.total_features, f"x1 has {x1.shape[1]} features, expected {self.total_features}"
+        # assert x2.shape[
+        #            1] == self.total_features, f"x2 has {x2.shape[1]} features, expected {self.total_features}"
         return self.LV_dist(x1, x2)

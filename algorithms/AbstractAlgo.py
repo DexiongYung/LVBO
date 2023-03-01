@@ -59,8 +59,29 @@ class AbstractAlgo:
     def fit_mll(self):
         fit_gpytorch_mll(self.get_marginal_ll())
 
-    def optimize_acq(self, ):
-        candidates, _ = optimize_acqf(self.acq, torch.column_stack(self.X_cont_bounds, self.X_qual_bounds))
+    def optimize_acq(self, epoch: int = 300, lr: float = 0.01):
+        X = torch.column_stack((self.X_cont, self.X_qual))
+        X_traj = list()
+        X.requires_grad_(True)
+        optimizer = torch.optim.Adam([X], lr=lr)
+
+        # run a basic optimization loop
+        for i in range(epoch):
+            optimizer.zero_grad()
+            # this performs batch evaluation, so this is an N-dim tensor
+            losses = - self.acq(X)  # torch.optim minimizes
+            loss = losses.sum()
+
+            loss.backward()  # perform backward pass
+            optimizer.step()  # take a step
+
+            # store the optimization trajecatory
+            X_traj.append(X.detach().clone())
+
+            if (i + 1) % 5 == 0:
+                print(f"Iteration {i + 1:>3}/{epoch}- Loss: {loss.item():>4.3f}")
+
+        return X_traj
 
     def add_to_DOE(self, candidates: Tensor, Y: Tensor):
         X_cont_cand = candidates[:, :self.num_quant]
