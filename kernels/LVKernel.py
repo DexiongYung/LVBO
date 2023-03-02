@@ -83,9 +83,13 @@ class LVKernel(gpytorch.kernels.Kernel):
                                     parameter=torch.nn.Parameter(torch.rand(len(qual_levels[i]), latent_dim)))
 
         self.X_qual_bounds = torch.zeros(2, 2)
-        self.X_qual_bounds[0, :] = -10
-        self.X_qual_bounds[1, :] = 10
+        self.X_qual_bounds[0, :] = 0
+        self.X_qual_bounds[1, :] = 5
         self.X_qual_bounds = self.X_qual_bounds.repeat(1, self.num_qual)
+        self.mapping_on = True
+
+    def turn_mapping_on(self, on: bool = True):
+        self.mapping_on = on
 
     def continous_correlation(self, x1: Tensor, x2: Tensor):
         squared_diff = (x1 - x2) ** 2
@@ -127,11 +131,13 @@ class LVKernel(gpytorch.kernels.Kernel):
         N = x1.shape[0]
         M = x2.shape[0]
         cov = torch.zeros(N, M)
-        x1_latent = self.convert_qual_to_latent(x1[:, self.num_cont:].type(torch.LongTensor))
-        x2_latent = self.convert_qual_to_latent(x2[:, self.num_cont:].type(torch.LongTensor))
 
-        x1 = torch.cat((x1[:, :self.num_cont], x1_latent), dim=1)
-        x2 = torch.cat((x2[:, :self.num_cont], x2_latent), dim=1)
+        if self.mapping_on:
+            x1_latent = self.convert_qual_to_latent(x1[:, self.num_cont:].type(torch.LongTensor))
+            x2_latent = self.convert_qual_to_latent(x2[:, self.num_cont:].type(torch.LongTensor))
+
+            x1 = torch.cat((x1[:, :self.num_cont], x1_latent), dim=1)
+            x2 = torch.cat((x2[:, :self.num_cont], x2_latent), dim=1)
 
         for i in range(N):
             for j in range(M):
