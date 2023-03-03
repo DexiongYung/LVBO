@@ -59,38 +59,15 @@ class AbstractAlgo:
     def fit_mll(self):
         fit_gpytorch_mll(self.get_marginal_ll())
 
-    def optimize_acq(self, epoch: int = 300, lr: float = 0.01):
-        X = torch.column_stack((self.X_cont, self.X_qual))
-        X_traj = list()
-        X.requires_grad_(True)
-        optimizer = torch.optim.Adam([X], lr=lr)
-
-        # run a basic optimization loop
-        for i in range(epoch):
-            optimizer.zero_grad()
-            # this performs batch evaluation, so this is an N-dim tensor
-            losses = - self.acq(X)  # torch.optim minimizes
-            loss = losses.sum()
-
-            loss.backward()  # perform backward pass
-            optimizer.step()  # take a step
-
-            # store the optimization trajecatory
-            X_traj.append(X.detach().clone())
-
-            if (i + 1) % 5 == 0:
-                print(f"Iteration {i + 1:>3}/{epoch}- Loss: {loss.item():>4.3f}")
-
-        return X_traj
+    def optimize_acq(self):
+        raise NotImplemented()
 
     def add_to_DOE(self, candidates: Tensor, Y: Tensor):
-        X_cont_cand = candidates[:, :self.num_quant]
-        X_qual_cand = candidates[:, self.num_quant, :]
-        self.X_cont = self.X_cont.cat(X_cont_cand)
-        self.X_qual = self.X_qual.cat(X_qual_cand)
-        self.Y = self.Y.cat(Y)
-        best_idx = Y.argmax()
-        self.best_observations.append(dict(cont=X_cont_cand[best_idx], qual=X_qual_cand[best_idx], Y=Y[best_idx]))
+        X_cont_cand = candidates[:, :self.num_cont]
+        X_qual_cand = candidates[:, self.num_cont:]
+        self.X_cont = torch.cat((self.X_cont, X_cont_cand))
+        self.X_qual = torch.cat((self.X_qual, X_qual_cand))
+        self.Y = torch.cat((self.Y, Y.unsqueeze(1)))
 
     def get_DOE_as_pd(self):
         # TODO: Might need to convert back to Pd

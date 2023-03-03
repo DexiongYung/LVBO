@@ -15,11 +15,11 @@ class Branin:
         self.X_cont_bounds_tnsr = torch.Tensor([[0], [1]])
 
     def forward(self, X_cont: torch.Tensor, X_qual: torch.Tensor):
-        if not is_tensor_in_qual_levels(X_qual=X_qual, qual_levels=self.qual_levels):
-            raise ValueError(fr"X_qual={X_qual}. X_qual has value \not\in {self.qual_levels}")
-
-        if not is_tensor_in_cont_bounds(X_cont=X_cont, cont_bounds=self.continuous_range):
-            raise ValueError(fr"X_cont={X_cont}. X_cont \not\in [-5,10]")
+        # if not is_tensor_in_qual_levels(X_qual=X_qual, qual_levels=self.qual_levels):
+        #     raise ValueError(fr"X_qual={X_qual}. X_qual has value \not\in {self.qual_levels}")
+        #
+        # if not is_tensor_in_cont_bounds(X_cont=X_cont, cont_bounds=self.continuous_range):
+        #     raise ValueError(fr"X_cont={X_cont}. X_cont \not\in [-5,10]")
 
         b = (5 / (4 * math.pi ** 2))
         c = 5 / math.pi
@@ -29,4 +29,4 @@ class Branin:
         X_cont = self.x_min['X_cont'] + (self.x_max['X_cont'] - self.x_min['X_cont']) * X_cont
         X_qual = self.x_min['X_qual'] + (self.x_max['X_qual'] - self.x_min['X_qual']) * X_qual
 
-        return (X_qual - b * torch.pow(X_cont, 2) + c * X_cont - r) ** 2 + s * (1 - t) * torch.cos(X_cont) + s
+        return -1 * ((X_qual - b * torch.pow(X_cont, 2) + c * X_cont - r) ** 2 + s * (1 - t) * torch.cos(X_cont) + s)

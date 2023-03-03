@@ -1,6 +1,7 @@
 import torch
 import gpytorch
 from torch import Tensor
+from torch.optim import SGD
 
 
 class LatentVariableParameters(object):
@@ -62,10 +63,11 @@ class LVKernel(gpytorch.kernels.Kernel):
         super().__init__(**kwargs)
         self.num_cont = num_cont
         self.latent_feat_nums = list()
+        params_list = list()
 
         # Register continuous parameters for MLE
-        self.register_parameter(name='quant_params',
-                                parameter=torch.nn.Parameter(torch.rand(num_cont)))
+        self.quant_params = torch.nn.Parameter(torch.rand(num_cont))
+        params_list.append(self.quant_params)
 
         self.num_latent = 0
         self.latent_params = list()
@@ -79,9 +81,11 @@ class LVKernel(gpytorch.kernels.Kernel):
             latent_dim = 2 if len(qual_levels[i]) > 2 else 1
             self.num_latent += latent_dim
             self.latent_feat_nums.append(latent_dim)
-            self.register_parameter(name=f"latent_param_{i}",
-                                    parameter=torch.nn.Parameter(torch.rand(len(qual_levels[i]), latent_dim)))
+            curr_param = torch.nn.Parameter(torch.rand(len(qual_levels[i]), latent_dim))
+            params_list.append(curr_param)
+            setattr(self, f"latent_param_{i}", curr_param)
 
+        self.optimizer = SGD(params_list, lr=0.1)
         self.X_qual_bounds = torch.zeros(2, 2)
         self.X_qual_bounds[0, :] = 0
         self.X_qual_bounds[1, :] = 5
@@ -126,18 +130,16 @@ class LVKernel(gpytorch.kernels.Kernel):
         :param x2: Second tensor of design of experiment samples
         :return: Covariance matrix
         """
-        x1 = x1[0]
-        x2 = x2[0]
         N = x1.shape[0]
         M = x2.shape[0]
         cov = torch.zeros(N, M)
 
-        if self.mapping_on:
-            x1_latent = self.convert_qual_to_latent(x1[:, self.num_cont:].type(torch.LongTensor))
-            x2_latent = self.convert_qual_to_latent(x2[:, self.num_cont:].type(torch.LongTensor))
-
-            x1 = torch.cat((x1[:, :self.num_cont], x1_latent), dim=1)
-            x2 = torch.cat((x2[:, :self.num_cont], x2_latent), dim=1)
+        # if self.mapping_on:
+        #     x1_latent = self.convert_qual_to_latent(x1[:, self.num_cont:].type(torch.LongTensor))
+        #     x2_latent = self.convert_qual_to_latent(x2[:, self.num_cont:].type(torch.LongTensor))
+        #
+        #     x1 = torch.cat((x1[:, :self.num_cont], x1_latent), dim=1)
+        #     x2 = torch.cat((x2[:, :self.num_cont], x2_latent), dim=1)
 
         for i in range(N):
             for j in range(M):
@@ -154,7 +156,7 @@ class LVKernel(gpytorch.kernels.Kernel):
 
                 cov[i, j] += qual_sum
 
-        return torch.exp(cov).unsqueeze(0)
+        return torch.exp(cov)
 
     def forward(self, x1: Tensor, x2: Tensor, **kwargs):
         # assert x1.shape[
