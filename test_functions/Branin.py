@@ -1,6 +1,5 @@
 import torch
 import math
-from utilities.tensor_utilities import is_tensor_in_qual_levels, is_tensor_in_cont_bounds
 
 
 class Branin:
